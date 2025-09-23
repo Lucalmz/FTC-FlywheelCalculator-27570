@@ -33,15 +33,6 @@ jobs:
         run: echo "APP_VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
         shell: bash
 
-      - name: Verify JAR file exists
-        run: |
-          if [ ! -f "target/${{ env.JAR_NAME }}" ]; then
-            echo "::error::JAR file not found at target/${{ env.JAR_NAME }}"
-            exit 1
-          fi
-          echo "JAR file found."
-        shell: bash
-
       - name: Run jpackage for Windows
         if: runner.os == 'Windows'
         run: >
@@ -62,7 +53,6 @@ jobs:
           --app-version ${{ env.APP_VERSION }}
           --java-options "-Dfile.encoding=UTF-8"
 
-      # ！！！关键修复 1：增加一个调试步骤来查看生成的文件 ！！！
       - name: List build directory contents (for debugging)
         run: |
           echo "Listing contents of the 'build' directory..."
@@ -73,9 +63,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ runner.os }}-Installer-${{ env.APP_VERSION }}
-          # ！！！关键修复 2：修正 Windows 的文件路径 ！！！
-          # jpackage for Windows creates a sub-directory with the app name.
+          # ！！！关键修复：使用通配符 (*) 来匹配任何版本号的文件 ！！！
           path: |
-            build/FlywheelCalculator.dmg
-            build/FlywheelCalculator/FlywheelCalculator.exe
+            build/FlywheelCalculator-*.dmg
+            build/FlywheelCalculator/FlywheelCalculator-*.exe
           if-no-files-found: error
