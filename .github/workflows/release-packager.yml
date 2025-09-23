@@ -3,7 +3,7 @@ name: Release Packager
 on:
   push:
     tags:
-      - 'v*' # 仅在推送 v*.*.* 格式的标签时触发
+      - 'v*'
 
 jobs:
   # --- 第一阶段：构建 ---
@@ -13,7 +13,7 @@ jobs:
         os: [windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
 
-    outputs: # 定义这个任务的输出，方便后续任务使用
+    outputs:
       asset_path: ${{ steps.upload_path.outputs.asset_path }}
       asset_name: ${{ steps.upload_path.outputs.asset_name }}
 
@@ -25,7 +25,6 @@ jobs:
           distribution: 'temurin'
 
       - name: Prepare Variables
-        id: prep
         run: echo "APP_VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
         shell: bash
 
@@ -38,10 +37,8 @@ jobs:
 
       - name: Build Installer
         run: |
-          # Windows
           if [ "${{ runner.os }}" == "Windows" ]; then
             jpackage --name "FlywheelCalculator" --input target/ --main-jar ${{ env.JAR_NAME }} --main-class com.bear27570.flywheelcalculator.MainApp --type exe --dest build/ --icon packaging/icon.ico --app-version ${{ env.APP_VERSION }} --win-console --java-options "-Dfile.encoding=UTF-8"
-          # macOS
           elif [ "${{ runner.os }}" == "macOS" ]; then
             jpackage --name "FlywheelCalculator" --input target/ --main-jar ${{ env.JAR_NAME }} --main-class com.bear27570.flywheelcalculator.MainApp --type dmg --dest build/ --icon packaging/icon.icns --app-version ${{ env.APP_VERSION }} --java-options "-Dfile.encoding=UTF-8"
           fi
@@ -59,7 +56,7 @@ jobs:
           fi
         shell: bash
 
-      - name: Upload Artifact (for debugging and backup)
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.upload_path.outputs.asset_name }}
@@ -67,14 +64,18 @@ jobs:
 
   # --- 第二阶段：发布 ---
   release:
-    needs: build # 依赖于 build 任务成功完成
-    runs-on: ubuntu-latest # 发布任务只需要一个平台即可
+    needs: build
+    runs-on: ubuntu-latest
+
+    # ！！！关键修复：在这里为这个任务授予创建Release的权限！！！
+    permissions:
+      contents: write # 授予工作流写入仓库内容的权限 (创建Release、上传Assets所需)
 
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          path: artifacts/ # 将所有构建产物下载到这个文件夹
+          path: artifacts/
 
       - name: Display structure of downloaded files
         run: ls -R artifacts/
@@ -82,7 +83,5 @@ jobs:
       - name: Create Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
-          # files: 将所有下载下来的安装包都附加到Release
           files: artifacts/**/*
-          # 自动生成发布说明
           generate_release_notes: true
