@@ -24,60 +24,65 @@ jobs:
 
       - name: Build with Maven
         run: |
-          # 动态设置版本号，并打包
           mvn versions:set -DnewVersion=${{ github.ref_name }}
           mvn -B package --file pom.xml
-          # 动态获取生成的JAR文件名
           echo "JAR_NAME=$(ls target/*.jar | xargs -n 1 basename)" >> $GITHUB_ENV
         shell: bash
 
       - name: Prepare App Version
-        # ！！！关键修复 1：
-        # 创建一个新的环境变量 APP_VERSION，它的值是 git 标签名去掉了开头的 "v"
         run: echo "APP_VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
         shell: bash
 
-      - name: Display Info (for debugging)
+      - name: Verify JAR file exists (for debugging)
+        # ！！！关键修复 1：增加一个验证步骤
+        # 如果 JAR 文件不存在，工作流会在这里失败，而不是在 jpackage 步骤报奇怪的错误
         run: |
-          echo "Git Tag: ${{ github.ref_name }}"
-          echo "App Version for jpackage: ${{ env.APP_VERSION }}"
-          echo "The built jar is: ${{ env.JAR_NAME }}"
+          echo "Looking for JAR file: target/${{ env.JAR_NAME }}"
+          if [ ! -f "target/${{ env.JAR_NAME }}" ]; then
+            echo "::error::JAR file not found!"
+            exit 1
+          fi
+          echo "JAR file found."
         shell: bash
 
       # --- Windows 打包步骤 ---
       - name: Run jpackage for Windows
         if: runner.os == 'Windows'
-        run: |
-          jpackage --name "FlywheelCalculator" `
-                   --input target/ `
-                   --main-jar ${{ env.JAR_NAME }} `
-                   --main-class com.bear27570.flywheelcalculator.MainApp `
-                   --type exe `
-                   --dest build/ `
-                   --icon packaging/icon.ico `
-                   --app-version ${{ env.APP_VERSION }} ` # <-- 使用修复后的版本号
-                   --win-console `
-                   --java-options "-Dfile.encoding=UTF-8"
+        # ！！！关键修复 2：将命令重写为单行，避免换行符问题
+        run: >
+          jpackage
+          --name "FlywheelCalculator"
+          --input target/
+          --main-jar ${{ env.JAR_NAME }}
+          --main-class com.bear27570.flywheelcalculator.MainApp
+          --type exe
+          --dest build/
+          --icon packaging/icon.ico
+          --app-version ${{ env.APP_VERSION }}
+          --win-console
+          --java-options "-Dfile.encoding=UTF-8"
 
       # --- macOS 打包步骤 ---
       - name: Run jpackage for macOS
         if: runner.os == 'macOS'
-        run: |
-          jpackage --name "FlywheelCalculator" \
-                   --input target/ \
-                   --main-jar ${{ env.JAR_NAME }} \
-                   --main-class com.bear27570.flywheelcalculator.MainApp \
-                   --type dmg \
-                   --dest build/ \
-                   --icon packaging/icon.icns \
-                   --app-version ${{ env.APP_VERSION }} \ # <-- 使用修复后的版本号
-                   --java-options "-Dfile.encoding=UTF-8"
+        # ！！！关键修复 2：将命令重写为单行，避免换行符问题
+        run: >
+          jpackage
+          --name "FlywheelCalculator"
+          --input target/
+          --main-jar ${{ env.JAR_NAME }}
+          --main-class com.bear27570.flywheelcalculator.MainApp
+          --type dmg
+          --dest build/
+          --icon packaging/icon.icns
+          --app-version ${{ env.APP_VERSION }}
+          --java-options "-Dfile.encoding=UTF-8"
 
       - name: Upload Installer
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ runner.os }}-Installer
+          name: ${{ runner.os }}-Installer-${{ env.APP_VERSION }} # 在产物名称中加入版本号
           path: |
             build/FlywheelCalculator.dmg
-            build/FlywheelCalculator-*.exe # 使用通配符以匹配Windows下的文件名
+            build/FlywheelCalculator-*.exe
           if-no-files-found: error
