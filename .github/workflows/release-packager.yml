@@ -1,20 +1,16 @@
 name: Java CI with Maven and jpackage
 
-# 触发条件：当一个以 "v" 开头的标签 (如 v1.0, v1.1.0) 被推送到仓库时
 on:
   push:
     tags:
       - 'v*'
 
 jobs:
-  # --- 构建任务 (合并了Windows和macOS的公共部分) ---
   build:
-    # 使用矩阵策略，同时在Windows和macOS上运行
     strategy:
       matrix:
         os: [windows-latest, macos-latest]
-
-    runs-on: ${{ matrix.os }} # 使用矩阵中定义的操作系统
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout code
@@ -27,16 +23,26 @@ jobs:
           distribution: 'temurin'
 
       - name: Build with Maven
-        # ！！！关键修复 1：
-        # 我们在这里不仅执行打包，还把最终生成的 JAR 文件名保存到一个环境变量中
-        # 这样就不需要在后面的步骤中写死文件名了
         run: |
+          # 动态设置版本号，并打包
+          mvn versions:set -DnewVersion=${{ github.ref_name }}
           mvn -B package --file pom.xml
+          # 动态获取生成的JAR文件名
           echo "JAR_NAME=$(ls target/*.jar | xargs -n 1 basename)" >> $GITHUB_ENV
         shell: bash
 
-      - name: Display JAR name (for debugging)
-        run: echo "The built jar is ${{ env.JAR_NAME }}"
+      - name: Prepare App Version
+        # ！！！关键修复 1：
+        # 创建一个新的环境变量 APP_VERSION，它的值是 git 标签名去掉了开头的 "v"
+        run: echo "APP_VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Display Info (for debugging)
+        run: |
+          echo "Git Tag: ${{ github.ref_name }}"
+          echo "App Version for jpackage: ${{ env.APP_VERSION }}"
+          echo "The built jar is: ${{ env.JAR_NAME }}"
+        shell: bash
 
       # --- Windows 打包步骤 ---
       - name: Run jpackage for Windows
@@ -49,7 +55,7 @@ jobs:
                    --type exe `
                    --dest build/ `
                    --icon packaging/icon.ico `
-                   --app-version ${{ github.ref_name }} `
+                   --app-version ${{ env.APP_VERSION }} ` # <-- 使用修复后的版本号
                    --win-console `
                    --java-options "-Dfile.encoding=UTF-8"
 
@@ -64,17 +70,14 @@ jobs:
                    --type dmg \
                    --dest build/ \
                    --icon packaging/icon.icns \
-                   --app-version ${{ github.ref_name }} \
+                   --app-version ${{ env.APP_VERSION }} \ # <-- 使用修复后的版本号
                    --java-options "-Dfile.encoding=UTF-8"
 
       - name: Upload Installer
         uses: actions/upload-artifact@v4
         with:
-          # ！！！关键修复 2：
-          # 为构建产物命名时加入操作系统信息，使其唯一
           name: ${{ runner.os }}-Installer
-          # 动态查找生成的文件路径
           path: |
             build/FlywheelCalculator.dmg
-            build/FlywheelCalculator/FlywheelCalculator.exe
-          if-no-files-found: error # 如果没找到文件，就让工作流失败
+            build/FlywheelCalculator-*.exe # 使用通配符以匹配Windows下的文件名
+          if-no-files-found: error
