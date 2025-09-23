@@ -13,6 +13,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+      # ... (所有之前的步骤都保持完全不变，它们都是正确的) ...
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -63,8 +64,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ runner.os }}-Installer-${{ env.APP_VERSION }}
-          # ！！！关键修复：使用通配符 (*) 来匹配任何版本号的文件 ！！！
+          # ！！！关键修复：根据Windows的真实日志输出，修正路径 ！！！
           path: |
             build/FlywheelCalculator-*.dmg
-            build/FlywheelCalculator/FlywheelCalculator-*.exe
+            build/FlywheelCalculator-*.exe
           if-no-files-found: error
