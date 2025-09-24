@@ -43,6 +43,8 @@ public class ThemeManager {
         UIManager.put("TextArea.selectionBackground", accentBlue);
         UIManager.put("TextArea.selectionForeground", Color.WHITE);
         UIManager.put("TextArea.border", new LineBorder(lightGray));
+        UIManager.put("TextField.caretForeground", Color.WHITE);
+        UIManager.put("TextArea.caretForeground", Color.WHITE);
 
         // --- 其他UI组件 ---
         UIManager.put("ScrollBar.background", darkGray);
