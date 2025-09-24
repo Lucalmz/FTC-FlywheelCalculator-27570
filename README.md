@@ -1,7 +1,7 @@
 FTC 飞轮发射器弹道计算器 (FTC Flywheel Ballistics Calculator)
 ![alt text](https://github.com/Lucalmz/FTC-FlywheelCalculator-27570/actions/workflows/release-packager.yml/badge.svg)
 
-![alt text](https://img.shields.io/github/v/release/Lucalmz/FTC-FlywheelCalculator-27570)
+[![alt text](https://img.shields.io/github/v/release/Lucalmz/FTC-FlywheelCalculator-27570)](https://github.com/Lucalmz/FTC-FlywheelCalculator-27570/releases/latest)
 一款专为 FTC (FIRST Tech Challenge) 机器人竞赛队伍设计的桌面应用，旨在通过精确的物理模型和可视化界面，辅助计算单飞轮或双飞轮发射机构的理想发射参数。
 A desktop application designed for FTC (FIRST Tech Challenge) robotics teams to assist in calculating ideal launch parameters for single or dual flywheel launchers, featuring an accurate physics model and a visual interface.
 ![alt text](screenshot.png)
